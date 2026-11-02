@@ -1,0 +1,47 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  host-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Compile packet test
+        run: >-
+          g++ -std=c++17 -Wall -Wextra -Werror
+          tests/test_ledup_protocol.cpp
+          -o /tmp/test_ledup_protocol
+      - name: Run packet test
+        run: /tmp/test_ledup_protocol
+      - name: Compile advertisement state test
+        run: >-
+          g++ -std=c++17 -Wall -Wextra -Werror
+          tests/test_advertise_state.cpp
+          -o /tmp/test_advertise_state
+      - name: Run advertisement state test
+        run: /tmp/test_advertise_state
+
+  esphome-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      ESPHOME_VERSION: 2026.10.1
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Install ESPHome
+        run: python3 -m pip install "esphome==${ESPHOME_VERSION}"
+      - name: Create build-only secrets
+        run: |
+          printf 'encryption: "%s"\n' "$(openssl rand -base64 32)" > secrets.yaml
+          printf 'ota: "%s"\n' "$(openssl rand -hex 24)" >> secrets.yaml
+          printf 'fallback_ap_password: "%s"\n' "$(openssl rand -base64 18)" >> secrets.yaml
+      - name: Validate ESPHome configuration
+        run: esphome config ledup_bridge.yaml
+      - name: Compile ESPHome firmware
+        run: esphome compile ledup_bridge.yaml

@@ -1,0 +1,121 @@
+substitutions:
+  device_name: ledup-bridge
+  device_friendly_name: ESPHome LEDUP Bridge ctr010f
+
+esphome:
+  name: ${device_name}
+  friendly_name: ${device_friendly_name}
+  includes:
+    - ledup_protocol.h
+    - ledup_advertise_state.h
+
+external_components:
+  - source:
+      type: local
+      path: components
+
+esp32:
+  variant: ESP32S3
+  board: esp32-s3-devkitc-1
+  flash_size: 16MB
+  framework:
+    type: esp-idf
+    sdkconfig_options:
+      CONFIG_BT_BLE_50_FEATURES_SUPPORTED: y
+      CONFIG_BT_BLE_42_FEATURES_SUPPORTED: y
+      CONFIG_ESP_TASK_WDT_TIMEOUT_S: "10"
+
+logger:
+  level: DEBUG
+  hardware_uart: UART0
+
+api:
+  encryption:
+    key: !secret encryption
+
+ota:
+  - platform: esphome
+    password: !secret ota
+
+wifi:
+  ap:
+    ssid: "LEDUP Bridge Setup"
+    password: !secret fallback_ap_password
+
+captive_portal:
+
+improv_serial:
+
+# Initialize the BLE transmitter without running a continuous scanner.
+esp32_ble:
+  id: ble_stack
+  enable_on_boot: true
+
+ledup_bridge:
+  id: ledup_transmitter
+  ble_id: ble_stack
+
+select:
+  - platform: template
+    name: "Tree Mode"
+    id: tree_mode
+    optimistic: true
+    options:
+      - "Light Show"
+      - "Steady WW"
+      - "Steady MLT"
+      - "Slow Fade WW"
+      - "Slow Fade MLT"
+      - "Twinkle WW"
+      - "Twinkle MLT"
+      - "Fast Flip"
+      - "Slow Flip"
+      - "Slow Fade"
+    initial_option: "Steady WW"
+    set_action:
+      - lambda: |-
+          uint8_t key_code = 0;
+          if (x == "Light Show") {
+            key_code = 170;
+          } else if (x == "Steady WW") {
+            key_code = 22;
+          } else if (x == "Steady MLT") {
+            key_code = 19;
+          } else if (x == "Slow Fade WW") {
+            key_code = 12;
+          } else if (x == "Slow Fade MLT") {
+            key_code = 25;
+          } else if (x == "Twinkle WW") {
+            key_code = 20;
+          } else if (x == "Twinkle MLT") {
+            key_code = 10;
+          } else if (x == "Fast Flip") {
+            key_code = 24;
+          } else if (x == "Slow Flip") {
+            key_code = 6;
+          } else if (x == "Slow Fade") {
+            key_code = 7;
+          }
+          if (key_code != 0) {
+            id(ledup_transmitter).send(7, key_code);
+          }
+
+# LEDUP provides toggle/cycle commands rather than queryable state.
+button:
+  - platform: template
+    name: "Tree Power Toggle"
+    id: tree_power_toggle
+    on_press:
+      - lambda: id(ledup_transmitter).send(7, 16);
+
+  - platform: template
+    name: "Tree Dimmer Cycle"
+    id: tree_dimmer_cycle
+    on_press:
+      - lambda: id(ledup_transmitter).send(7, 17);
+
+  - platform: template
+    name: "Tree Timer Toggle"
+    id: tree_timer_toggle
+    on_press:
+      - lambda: id(ledup_transmitter).send(7, 14);

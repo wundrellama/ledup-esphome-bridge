@@ -242,7 +242,6 @@ Connect to `LEDUP Bridge Setup` again. Open `http://192.168.4.1` and enter the h
 | `tests/test_ledup_protocol.cpp` | Packet regression tests |
 | `tests/test_advertise_state.cpp` | Advertisement state-machine tests |
 | `secrets.example.yaml` | Safe template for local secrets |
-| `.github/workflows/test.yml` | Packet, state-machine, and ESPHome build tests |
 
 ## Security
 
